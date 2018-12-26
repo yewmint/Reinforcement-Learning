@@ -14,11 +14,20 @@ VARIETY_MIN = 0.5
 SYNC_FREQUENCY = 20
 
 class DDPGAgent:
+  """
+  DDPGAgent to perform DDPG on pendulum-v0
+  """
   def __init__(self, state_dims, action_dims, action_bound):
+    """
+    :params state_dims: dims of state space
+    :params action_dims: dims of action space
+    :params action_bound: bound of action space
+    """
     self.state_dims = state_dims
     self.action_dims = action_dims
     self.action_bound = action_bound
 
+    # exploration variety
     self.variety = action_bound * 2
     self.replay_num = 0
 
@@ -31,6 +40,11 @@ class DDPGAgent:
     self.saver = tf.train.Saver()
 
   def _build_actor(self, states, name, trainable):
+    """
+    :param states: input states placeholder
+    :param name: variable scope of net
+    :param trainable: if vars is trainable
+    """
     with tf.variable_scope(name):
       hidden = tf.layers.dense(
         states, 
@@ -54,6 +68,14 @@ class DDPGAgent:
       return action
 
   def _build_critic(self, states, actions, name, trainable):
+    """
+    manually create special hidden dense layer
+
+    :param states: input states placeholder
+    :param actions: input actions placeholder
+    :param name: variable scope of net
+    :param trainable: if vars is trainable
+    """
     with tf.variable_scope(name):
       w_states = tf.get_variable(
         'w_states',
@@ -78,6 +100,9 @@ class DDPGAgent:
       return Q
 
   def _build_training(self):
+    """
+    build training operations
+    """
     self.sess = tf.Session()
 
     # placeholders
@@ -161,6 +186,12 @@ class DDPGAgent:
     self.sess.run(tf.global_variables_initializer())
 
   def act(self, state, learning=True):
+    """
+    predict action according to state
+    
+    :params state: current state
+    "params learning: if exploration is enabled
+    """
     states = np.expand_dims(state, 0)
     action = self.sess.run(self.eval_actions, {self.states_in: states})[0]
     if learning:
@@ -169,12 +200,23 @@ class DDPGAgent:
     return action
 
   def remember(self, state, action, reward, next_action):
+    """
+    save experience
+    
+    :params state:
+    :params action:
+    :params reward:
+    :params next_action:
+    """
     self.states.append(state)
     self.actions.append(action)
     self.rewards.append(reward)
     self.next_actions.append(next_action)
 
   def replay(self):
+    """
+    replay experience to learn
+    """
     batch_size = min(BATCH_SIZE, len(self.states))
     batch_indexes = np.random.choice(len(self.states), batch_size)
 
@@ -208,7 +250,13 @@ class DDPGAgent:
     return (actor_loss, critic_loss)
 
   def save(self, path):
+    """
+    save weights
+    """
     self.saver.save(self.sess, path)
 
   def load(self, path):
+    """
+    load weights
+    """
     self.saver.restore(self.sess, path)
